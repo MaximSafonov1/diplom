@@ -34,14 +34,14 @@ class VkUser:
         if user_id is None:
             user_id = self.owner_id
         photos_list = []
-        likes_list = []
         all_photos = self.get_photos(user_id)
         for photo in all_photos['response']['items']:
-            photos_list.append(photo['sizes'][-1]['url'])
-            likes_list.append(photo['likes']['count'])
-            photos_dict = dict(zip(likes_list,
-                                   photos_list))  # ключ словаря-количество лайков на фото, значение-фото максимального размера
-        return photos_dict
+            photos_list.append({
+                'likes': photo['likes']['count'],
+                'url': photo['sizes'][-1]['url'],
+                'size': photo['sizes'][-1]['type']
+            })
+        return photos_list
 
 
 id = input('Введите id пользователя или нажмите enter для определения id по токену: ')
@@ -51,6 +51,8 @@ vk_client = VkUser(token, '5.130')
 vk_photos = vk_client.max_size(id)
 
 # pprint(vk_photos)
+# pprint(vk_client.get_photos(id))
+
 
 ya_token = input('Введите Я.Диск токен: ')
 
@@ -92,10 +94,13 @@ class YaUploader:
     def save_photos(self):
         folder_name = datetime.strftime(datetime.now(), "%d.%m.%Y-%H.%M.%S")
         self.create_folder(folder_name)
-        for keys, values in vk_photos.items():
-            full_name = folder_name + f'-({keys}.jpg)'
-            result = self.load_url(values, full_name)
-        print(result)
+        json_file = []
+        for item in vk_photos:
+            full_name = folder_name + f"--{item['likes']}.jpg"
+            result = self.load_url(item['url'], full_name)
+            json_file.append({'file_name': full_name, 'size': item['size']})
+        pprint(json_file)
+        return result
 
 
 
