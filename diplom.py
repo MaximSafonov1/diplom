@@ -1,7 +1,8 @@
 from pprint import pprint
 import requests
 from datetime import datetime
-
+import time
+from tqdm import tqdm
 
 token = input('Введите VK токен: ')
 
@@ -17,7 +18,7 @@ class VkUser:
         }
         self.owner_id = requests.get(self.url + 'users.get', self.params).json()['response'][0]['id']
 
-    def get_photos(self, user_id=None, count=5):
+    def get_photos(self, user_id=None, count=100):
         if user_id is None:
             user_id = self.owner_id
         followers_url = self.url + 'photos.get'
@@ -30,17 +31,18 @@ class VkUser:
         res = requests.get(followers_url, params={**self.params, **followers_params})
         return res.json()
 
-    def max_size(self, user_id=None):
+    def max_size(self, user_id=None, count=100):
         if user_id is None:
             user_id = self.owner_id
         photos_list = []
-        all_photos = self.get_photos(user_id)
+        all_photos = self.get_photos(user_id, count)
         for photo in all_photos['response']['items']:
             photos_list.append({
                 'likes': photo['likes']['count'],
                 'url': photo['sizes'][-1]['url'],
                 'size': photo['sizes'][-1]['type']
             })
+        print(f'Всего на странице: {len(photos_list)} фото.')
         return photos_list
 
 
@@ -91,20 +93,21 @@ class YaUploader:
             print('error')
         return response
 
-    def save_photos(self):
+    def save_photos(self, vk_photos, count=5):
         folder_name = datetime.strftime(datetime.now(), "%d.%m.%Y-%H.%M.%S")
         self.create_folder(folder_name)
         json_file = []
-        for item in vk_photos:
-            full_name = folder_name + f"--{item['likes']}.jpg"
+        for item in tqdm(vk_photos[0:count]):
+            full_name = f"{folder_name}/{item['likes']}.jpg"
             result = self.load_url(item['url'], full_name)
             json_file.append({'file_name': full_name, 'size': item['size']})
+            time.sleep(1)
         pprint(json_file)
         return result
 
-
+count = int(input('Введите число фотографий, которые хотите загрузить на ЯндексДиск: '))
 
 file = YaUploader(ya_token)
-file.save_photos()
+file.save_photos(vk_photos, count)
 
 
